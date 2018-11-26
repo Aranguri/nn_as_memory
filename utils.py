@@ -7,6 +7,18 @@ def ps(a1, a2=None, a3=None, a4=None, a5=None):
         if a is not None:
             print (np.shape(a))
 
+def tp(t1):
+    return tf.Print([0], [ts(t1)])
+
+def ts(a1):#todo: allow more than one array as input
+    return tf.shape(a1)
+
+def outer_prod(t1, t2):
+    return tf.einsum('ij,ik->ijk', t1, t2)
+
+def expand(t1, axis=0):
+    return tf.expand_dims(t1, axis)
+
 def plot(array):
     plt.ion()
     plt.cla()

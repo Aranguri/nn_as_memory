@@ -18,7 +18,9 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         self.step = 0
 
     def __call__(self, x, prev_state):
-        print_op = tf.Print([0], [self.c2o_w[0][0]])#tf.global_variables()[4][0][0]])
+
+        # print_op = tf.Print([0], [tf.global_variables()])
+        # print_op = tf.Print([0], [self.c2o_w[0][0]])#tf.global_variables()[4][0][0]])
         #prepare input
         batch_size, memory_length, memory_size, _, output_size, interface_size, params_size = self.sizes
         ctrl_state, read_list, w_prev, memory = prev_state
@@ -48,8 +50,8 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         # output = tf.clip_by_value(output, -20, 20)
         # print_op = tf.Print([0], [memory[0][0]])
         # with tf.control_dependencies([print_op]):
-        with tf.control_dependencies([print_op]):
-            w_list = tf.concat((w_read, w_write), axis=0)
+        # with tf.control_dependencies([print_op]):
+        w_list = tf.concat((w_read, w_write), axis=0)
         self.step += 1
         return output, NTMState(ctrl_state=ctrl_state, read_list=read_list, w_list=w_list, memory=memory)
 
@@ -68,9 +70,18 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         w_g = gate * w_c + (1 - gate) * w_prev
 
         # convolve
+        shift = tf.manip.roll(shift, shift=(shift_length-1)//2, axis=1)
+        shift = tf.pad(shift, tf.constant([[0, 0,], [0, memory_length - shift_length]]))
+        shift = tf.manip.roll(shift, shift=((-(shift_length-1)//2) % memory_length), axis=1)
+        t = tf.concat([tf.reverse(shift, axis=[1]), tf.reverse(shift, axis=[1])], axis=1)
+        rolled_matrix = tf.stack([t[:, memory_length - i - 1:memory_length * 2 - i - 1] for i in range(memory_length)], axis=1)
+        w_tilde = tf.einsum('jik,jk->ji', rolled_matrix, w_g)
+
+        '''
         roll = lambda i: tf.manip.roll(shift, shift=((i-1) % memory_length), axis=1)
         rolled_matrix = tf.map_fn(roll, tf.range(memory_length), dtype=tf.float32)
         w_tilde = tf.einsum('ijk,jk->ji', rolled_matrix, w_g)
+        '''
         w_tilde_num = tf.pow(w_tilde, sharpener)
         w = w_tilde_num / tf.reduce_sum(w_tilde_num, axis=1, keepdims=True)
 
@@ -91,8 +102,8 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         memory_length, memory_size = self.sizes[1:3]
         return NTMState(
             ctrl_state=self.controller.state_size,
-            read_list=[memory_length],
-            w_list=[memory_size, memory_size],
+            read_list=[memory_size],
+            w_list=[memory_length, memory_length],
             memory=tf.TensorShape([memory_size * memory_length]))
 
     @property

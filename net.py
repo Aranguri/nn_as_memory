@@ -1,38 +1,35 @@
 import tensorflow as tf
 import itertools
 from utils import *
-# import sys
-# sys.path.append('../memory/NeuralTuringMachine')
-from ntm2 import NTMCell
+from ntm import NTMCell
 
 batch_size = 32
 input_size = output_size = 8
+grad_max_norm = 50
 
 xs = tf.placeholder(tf.float32, shape=(batch_size, None, input_size + 1))
 ys = tf.placeholder(tf.float32, shape=(batch_size, None, output_size))
-output_length = tf.shape(ys)[1]
 
-cell = NTMCell(output_size, batch_size, h_size=100, memory_length=128, memory_size=20, shift_length=3)
-# cell = NTMCell(controller_layers=1, controller_units=100, memory_size=20, memory_length=128, read_head_num=1, write_head_num=1, init_mode='constant', output_dim=output_size)
+cell = NTMCell(output_size, batch_size, h_size=100, memory_size=20, memory_length=128, shift_length=3)
 outputs, _ = tf.nn.dynamic_rnn(cell, xs, dtype=tf.float32)
-outputs = outputs[:, -output_length:]
+outputs = outputs[:, -tf.shape(ys)[1]:]
 
-optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
+optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
 loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=ys, logits=outputs)
-trainable_variables = tf.trainable_variables()
-grads, _ = tf.clip_by_global_norm(tf.gradients(loss, trainable_variables), 50)
-minimize = optimizer.apply_gradients(zip(grads, trainable_variables))
+trainable_vars = tf.trainable_variables()
+grads, _ = tf.clip_by_global_norm(tf.gradients(loss, trainable_vars), grad_max_norm)
+minimize = optimizer.apply_gradients(zip(grads, trainable_vars))
 
 binary_outputs = tf.to_float(outputs > 0)
-errors = tf.equal(binary_outputs, ys)
-accuracy = tf.reduce_mean(tf.to_float(errors))
-cost = (1 - accuracy) * tf.to_float(output_length) * output_size
+errors = tf.not_equal(binary_outputs, ys)
+cost = tf.reduce_sum(tf.to_float(errors)) / batch_size
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     tr_loss, tr_cost = {}, {}
 
     for i in itertools.count():
+        # generate task
         bytes_length = 20
         bytes = np.random.randint(0, 2, size=(batch_size, bytes_length, input_size))
         bytes_input = np.pad(bytes, ((0, 0), (0, 0), (0, 1)), 'constant')
@@ -40,13 +37,19 @@ with tf.Session() as sess:
         start_mark[:, :, -1] = 1
         x_ = np.concatenate((bytes_input, np.zeros_like(bytes_input)), axis=1)
         y_ = bytes
+
+        # feed task to the ntm
         tr_loss[i], tr_cost[i], outputs_, _ = sess.run([loss, cost, binary_outputs, minimize], feed_dict={xs: x_, ys: y_})
-        # print(outputs_[0][0], y_[0][0])
-        print(i, tr_cost[i])
-        if i % 3 == 0:
-            plot(tr_cost)
+        last = list(tr_cost.values())[-10:]
+        print(i, np.mean(last))
+        #plot(tr_cost)
 
 '''
+Thigns to try
+* is the clip_by_global_nrom doing something? print it
+* test my lstm
+* use a better cost (avg over last 5)
+
 #Next steps: assure the implementation is correct (up to inefficiencies,) by reading my code and benchmarking. Finish details in ntm.py
 #why tanh for the key
 #I'm assuming sequence number equals the number of individual sequences that the sentence saw. ie iteration_nums * batch_size
@@ -69,6 +72,10 @@ My interface and task, their code (but dirty:): @130 76 and 72 @150 73 and 73 @2
 Everything mine: @130 .74 @150 73.5 @200 73 @230 71.5
 Everything mine (lr 1e-3): 57
 Everything their: @3000 53
+Everything mine (updated code): @130 72 @150 74 @230 70.5
+Changing to dense:              @130 74 @150 73 @230 70
+Both: @520 around 63
+@150 72 @200 70
 Performance seems to be decreasing a
 
 '''

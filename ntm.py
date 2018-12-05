@@ -2,19 +2,21 @@ import tensorflow as tf
 import collections
 from utils import *
 
-NTMState = collections.namedtuple('NTMState', ('ctrl_state', 'read', 'weights', 'memory'))
+NTMState = collections.namedtuple('NTMState', ('ctrl_state', 'read', 'weights', 'memory', 'losses'))
 
 class NTMCell(tf.contrib.rnn.RNNCell):
-    def __init__(self, output_size, batch_size, h_size, memory_size, memory_length, shift_length):
+    def __init__(self, output_size, batch_size, memory_size, memory_length, memory_cell, h_size, shift_length):
         interface_size = memory_size + 1 + 1 + shift_length + 1
         params_size = 2 * interface_size + 2 * memory_size
         self.controller = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(h_size)])
+        self.memory_cell = memory_cell
         self.sizes = [batch_size, memory_length, memory_size, shift_length, output_size, interface_size, params_size]
 
     def __call__(self, x, prev_state):
         #prepare input
         batch_size, memory_length, memory_size, _, output_size, interface_size, params_size = self.sizes
-        ctrl_state_prev, read_prev, weights_prev, memory_prev = prev_state
+        ctrl_state_prev, read_prev, weights_prev, memory, losses = prev_state
+        self.memory_cell.memory = memory
         x_and_r = tf.squeeze(tf.concat(([x], read_prev), axis=2))
 
         #execute controller
@@ -25,21 +27,26 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         interface_read, interface_write, write, erase = interface
 
         #read head
+        memory_prev = self.memory_cell.read()
+        pop = tf.Print([0], [memory_prev[0][0][0]])
         w_read = self.addressing(interface_read, memory_prev, weights_prev[0])
         read = expand(tf.einsum('ij,ijk->ik', w_read, memory_prev))
 
         #write head
         write, erase = tf.tanh(write), tf.sigmoid(erase)
         w_write = self.addressing(interface_write, memory_prev, weights_prev[1])
-        memory = memory_prev * (1 - outer_prod(w_write, erase)) + outer_prod(w_write, write)
+        self.memory_cell.write(w_write, write, erase)
+        # loss = self.memory_cell.write(w_write, write, erase)
+        # minimize = self.optimizer.minimize(loss)
 
         # prepare output
         c2o_input = tf.concat((ctrl_output, read_prev[0]), axis=1)
         output = tf.layers.dense(c2o_input, output_size)
         output = tf.clip_by_value(output, -20, 20)
-        weights = tf.concat((w_read, w_write), axis=0)
+        with tf.control_dependencies([pop]):
+            weights = tf.concat((w_read, w_write), axis=0)
 
-        return output, NTMState(ctrl_state=ctrl_state, read=read, weights=weights, memory=memory)
+        return output, NTMState(ctrl_state=ctrl_state, read=read, weights=weights, memory=self.memory_cell.memory, losses=losses)
 
     def addressing(self, interface, m_prev, w_prev):
         # prepare input
@@ -71,12 +78,13 @@ class NTMCell(tf.contrib.rnn.RNNCell):
     def zero_state(self, batch_size, dtype):
         batch_size, memory_length, memory_size = self.sizes[:3]
         ctrl_state = self.controller.zero_state(batch_size, dtype)
-        read = tf.Variable(tf.constant(0.0, shape=(1, batch_size, memory_size)))
-        weights = tf.Variable(tf.random_normal(shape=(2 * batch_size, memory_length), stddev=1e-5))
-        memory = tf.Variable(tf.constant(1e-6, shape=(batch_size, memory_length, memory_size)))
+        read = tf.get_variable('read', initializer=tf.zeros_initializer(), shape=(1, batch_size, memory_size))
+        weights = tf.get_variable('weights', initializer=tf.random_normal_initializer(stddev=1e-5), shape=(2 * batch_size, memory_length))
+        memory = tf.get_variable('memory', initializer=tf.constant_initializer(1e-6), shape=(batch_size, memory_length, memory_size))
+        losses = tf.get_variable('losses', initializer=tf.zeros_initializer(), shape=(1,))
         #memory = tf.stop_gradient(memory)
 
-        return NTMState(ctrl_state=ctrl_state, read=read, weights=weights, memory=memory)
+        return NTMState(ctrl_state=ctrl_state, read=read, weights=weights, memory=memory, losses=losses)
 
     @property
     def state_size(self):
@@ -85,7 +93,8 @@ class NTMCell(tf.contrib.rnn.RNNCell):
             ctrl_state=self.controller.state_size,
             read=[memory_size],
             weights=[memory_length, memory_length],
-            memory=tf.TensorShape([memory_size * memory_length]))
+            memory=tf.TensorShape([memory_length * memory_size]),
+            losses=tf.TensorShape([1]))
 
     @property
     def output_size(self):

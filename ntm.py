@@ -28,7 +28,7 @@ class NTMCell(tf.contrib.rnn.RNNCell):
 
         #read head
         memory_prev = self.memory_cell.read()
-        pop = tf.Print([0], [memory_prev[0][0][0]])
+        # pop = tf.Print([0], [memory_prev[0][0][0]])
         w_read = self.addressing(interface_read, memory_prev, weights_prev[0])
         read = expand(tf.einsum('ij,ijk->ik', w_read, memory_prev))
 
@@ -43,8 +43,9 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         c2o_input = tf.concat((ctrl_output, read_prev[0]), axis=1)
         output = tf.layers.dense(c2o_input, output_size)
         output = tf.clip_by_value(output, -20, 20)
-        with tf.control_dependencies([pop]):
-            weights = tf.concat((w_read, w_write), axis=0)
+        pop = tf.Print([0], [ca(w_read), ca(w_write), ca(interface_read), ca(interface_write), ca(weights_prev), ca(memory_prev)])
+        #with tf.control_dependencies([pop]):
+        weights = tf.concat((w_read, w_write), axis=0)
 
         return output, NTMState(ctrl_state=ctrl_state, read=read, weights=weights, memory=self.memory_cell.memory, losses=losses)
 
@@ -70,7 +71,8 @@ class NTMCell(tf.contrib.rnn.RNNCell):
         rolled_matrix = tf.stack([shift_matrix[:, memory_length - i - 1:memory_length * 2 - i - 1]
                                   for i in range(memory_length)], axis=1)
         w_tilde = tf.einsum('jik,jk->ji', rolled_matrix, w_g)
-        w_tilde_num = tf.pow(w_tilde, sharpener)
+        w_tilde_num = tf.pow(tf.nn.relu(w_tilde), sharpener) #TODO: remove relu here. If we remove it, we get nan errors (eg tf.pow(-.4, 1.7) = nan). Somehow, we need to prevent w_tilde from having negative values.
+
         w = w_tilde_num / tf.reduce_sum(w_tilde_num, axis=1, keepdims=True)
 
         return w

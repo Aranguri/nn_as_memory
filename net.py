@@ -1,3 +1,4 @@
+from pprint import pprint
 import tensorflow as tf
 import itertools
 from utils import *
@@ -7,49 +8,34 @@ from memory_cell_matrix import MemoryMatrix
 from poly_task import PolyTask
 
 batch_size = 32
-repetitions = 1
-input_size = output_size = 1
-input_length = 16
-output_length = input_length# // 2
+input_size = 2
+output_size = 1
+input_length = 64
+output_length = input_length
 grad_max_norm = 50
 memory_size = 20
-basis_length = 4
+basis_length = 8
 h_lengths = [basis_length, 8, 16, 32, 64]
-memory_length = 128
+memory_length = 32
 
 basis = tf.get_variable('basis', (batch_size, basis_length, memory_size))
 memory_cell = MemoryMatrix(basis, h_lengths, memory_length, memory_size, batch_size)
 cell = NTMCell(output_size, batch_size, memory_size, memory_length, memory_cell, h_size=100, shift_length=3)
 
-xs = tf.placeholder(tf.float32, shape=(batch_size, input_length, repetitions * input_size))
-ys = tf.placeholder(tf.float32, shape=(batch_size, input_length))
+xs = tf.placeholder(tf.float32, shape=(batch_size, input_length, input_size))
+ys = tf.placeholder(tf.float32, shape=(batch_size, input_length, output_size))
 
-def cond(outputs):
-    # tf.matmul(outputs, ys)
-    return tf.not_equal(tf.shape(outputs)[1], tf.shape(ys)[1])
+outputs, _ = tf.nn.dynamic_rnn(cell, xs, dtype=tf.float32)
 
-def body(outputs):
-    step = tf.shape(outputs)[1]
-    x = xs[:, :, step:step + output_size]
-    x = tf.reshape(x, shape=[batch_size, input_length, input_size])
-    output, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-    output = output[:, -output_length:]
-    outputs = tf.concat((outputs, output), axis=2)
-    return outputs
-
-loop_var = [tf.constant(0., shape=(batch_size, output_length))]
-loop_shape = [tf.TensorShape((batch_size, output_length))]
-outputs = tf.while_loop(cond, body, loop_var, shape_invariants=loop_shape)
-
-optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
-loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=ys, logits=outputs)
+optimizer = tf.train.AdamOptimizer(learning_rate=1e-2)
+loss = tf.losses.mean_squared_error(ys, outputs)
 trainable_vars = tf.trainable_variables()
-grads, _ = tf.clip_by_global_norm(tf.gradients([loss], trainable_vars), grad_max_norm)
+grads, _ = tf.clip_by_global_norm(tf.gradients([loss], trainable_vars), grad_max_norm) #{why|is this useful}
 minimize = optimizer.apply_gradients(zip(grads, trainable_vars))
 
-binary_outputs = tf.to_float(outputs > 0)
-errors = tf.not_equal(binary_outputs, ys)
-cost = tf.reduce_sum(tf.to_float(errors)) / batch_size
+# binary_outputs = tf.to_float(outputs > 0)
+# errors = tf.not_equal(binary_outputs, ys)
+# cost = tf.reduce_sum(tf.to_float(errors)) / batch_size
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -57,24 +43,18 @@ with tf.Session() as sess:
     poly_task = PolyTask(batch_size, input_length)
 
     for i in itertools.count():
-        # generate task
-        # bytes_length = output_length
-        # bytes = np.random.randint(0, 2, size=(batch_size, bytes_length, repetitions * input_size))
-        # bytes_input = np.pad(bytes, ((0, 0), (0, 0), (0, 1)), 'constant')
-        # start_mark = np.zeros((batch_size, 1, input_size + 1))
-        # start_mark[:, :, -1] = 1
-        # x_ = np.concatenate((bytes, np.zeros_like(bytes)), axis=1)
-        # y_ = bytes
-        # x_ = np.array(x_, dtype=np.float32)
-
         # feed task to the ntm
         x_, y_ = poly_task.next_batch()
-        ps(x_, y_)
         # b = sess.run([a], feed_dict={xs: x_, ys: y_})
-        tr_loss[i], tr_cost[i], outputs_, _ = sess.run([loss, cost, binary_outputs, minimize], feed_dict={xs: x_, ys: y_})
-        last = list(tr_cost.values())[-10:]
+        tr_loss[i], outputs_, _ = sess.run([loss, outputs, minimize], feed_dict={xs: x_, ys: y_})
+        #print(np.mean(np.sign(outputs_) == np.sign(y_)))
+        #print(np.mean(np.sign(y_) * .5 + .5))
+        outputs_ = outputs_.reshape(32, 64)
+        y_ = y_.reshape(32, 64)
+        pprint(list(zip(x_[0,:,0], x_[0,:,1], y_[0], outputs_[0], abs(outputs_[0] - y_[0]))), width=200)
+        last = list(tr_loss.values())[-10:]
         print(i, np.mean(last))
-        plot(tr_cost)
+        plot(tr_loss)
 
 
 
@@ -128,5 +108,26 @@ There are several things to do. The thing is that when I'm not working is diffic
 * First, short-term memory could be a neural net. It could be either a neural net where you edit the last layer or a neural net that uses the key as input or something like unixpicle
 * Second, long-term short-term interaction with matrices, or with nn.
 * third, try the wikidata task.
+
+Instead of training the ax**2+bx+c from scratch, try curriculuumum learning
+
+Notice that we changed the loss from sigmoid cross entropy {what was that?} to mse. The inverse change gives us a lot of perforamnce ~~beware.
+why are there times in training an algorithm that all of a sudden the loss decreases by a lot (and it seems to happen around the same iteration often)
+
+Look for a correlation between the numbers a, b, and c of the polynomial and what's stored in the memory.
+
+    # generate task
+    # bytes_length = output_length
+    # bytes = np.random.randint(0, 2, size=(batch_size, bytes_length, repetitions * input_size))
+    # bytes_input = np.pad(bytes, ((0, 0), (0, 0), (0, 1)), 'constant')
+    # start_mark = np.zeros((batch_size, 1, input_size + 1))
+    # start_mark[:, :, -1] = 1
+    # x_ = np.concatenate((bytes, np.zeros_like(bytes)), axis=1)
+    # y_ = bytes
+    # x_ = np.array(x_, dtype=np.float32)
+
+next steps
+* compare to a vainilla LSTM
+
 
 '''

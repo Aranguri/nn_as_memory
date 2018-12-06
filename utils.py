@@ -27,8 +27,9 @@ def ps(a1, a2=None, a3=None, a4=None, a5=None):
         if a is not None:
             print (np.shape(a))
 
-tp = lambda t: tf.Print([0], [ts(t)])
-ts = lambda t: tf.shape(t)#todo: allow more than one array as input
+pts = lambda t: tf.Print([0], [sh(t)])
+pc = lambda ts: tf.Print([0], [tf.map_fn(ca, ts)])
+sh = lambda t: tf.shape(t)#todo: allow more than one array as input
 ca = lambda t: tf.reduce_any(tf.is_nan(t))
 cn = lambda t: tf.count_nonzero(t)
 ap = lambda t: tf.reduce_any(t <= 0)

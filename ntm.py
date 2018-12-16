@@ -8,7 +8,7 @@ class NTMCell(tf.contrib.rnn.RNNCell):
     def __init__(self, output_size, batch_size, memory_size, memory_length, memory_cell, h_size, shift_length):
         interface_size = memory_size + 1 + 1 + shift_length + 1
         params_size = 2 * interface_size + 2 * memory_size
-        self.controller = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(h_size)])
+        self.controller = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(h_size)])#update basic LSTM to newer type
         self.memory_cell = memory_cell
         self.sizes = [batch_size, memory_length, memory_size, shift_length, output_size, interface_size, params_size]
 

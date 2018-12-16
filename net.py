@@ -1,41 +1,67 @@
+'''
+Next tasks:
+The goal is to have an NTM that we know it works to start adding things to it. Otherwise,
+  it's difficult to debug the things we are adding.
+* Conclude something from the two experiments. How can I verify that the official NTM is better than a LSTM. After that, how can I verify that my NTM is similar to official NTM and better than LSTM.
+* Errands: Order all the tasks and things to do; get credits for GPU.
+It doesn't make sense to continue adding features if I don't get this right. For the good thing about coding new features is that they become real, but they aren't real if the codebase isn't working.
+
+Experiment:
+the difference isn't clear at all (there may be no difference) in the first steps (in the first 2000 iterations). It's only after the 2000 iterations that the NTM starts to outperform the NTM by a lot.
+(around 1000 they are the same|)
+LSTM ... @5200: 44
+LSTM in copy (stand) @31000: 33.5
+NTM in copy (stand) @5200: 0.03
+'''
+
+
 from pprint import pprint
 import tensorflow as tf
 import itertools
 from utils import *
-from ntm import NTMCell
+from NeuralTuringMachine.ntm import NTMCell
 from memory_cell_nn import MemoryNN
 from memory_cell_matrix import MemoryMatrix
 from poly_task import PolyTask
 
-batch_size = 32
+batch_size = 128
 input_size = 2
 output_size = 1
 input_length = 64
 output_length = input_length
 grad_max_norm = 50
 memory_size = 20
-basis_length = 8
+basis_length = 20
 h_lengths = [basis_length, 8, 16, 32, 64]
-memory_length = 32
+memory_length = 128
+mann = 'official'
+h_lengths_LSTM = [100]#, 50]
 
 basis = tf.get_variable('basis', (batch_size, basis_length, memory_size))
 memory_cell = MemoryMatrix(basis, h_lengths, memory_length, memory_size, batch_size)
-cell = NTMCell(output_size, batch_size, memory_size, memory_length, memory_cell, h_size=100, shift_length=3)
+
+if mann == 'official':
+    cell = NTMCell(1, 8, memory_length, memory_size,
+                    1, 1, addressing_mode='content_and_location',
+                    shift_range=1, reuse=False, output_dim=1,
+                    clip_value=20)
+elif mann == 'mine':
+    cell = NTMCell(output_size, batch_size, memory_size, memory_length, memory_cell, h_size=100, shift_length=3)
+
+else:
+    layers = [tf.contrib.rnn.LSTMBlockCell(num_units=h) for h in h_lengths_LSTM]
+    cell = tf.nn.rnn_cell.MultiRNNCell(layers)
 
 xs = tf.placeholder(tf.float32, shape=(batch_size, input_length, input_size))
 ys = tf.placeholder(tf.float32, shape=(batch_size, input_length, output_size))
-
 outputs, _ = tf.nn.dynamic_rnn(cell, xs, dtype=tf.float32)
+outputs = tf.layers.dense(outputs, output_size)
 
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-2)
 loss = tf.losses.mean_squared_error(ys, outputs)
 trainable_vars = tf.trainable_variables()
 grads, _ = tf.clip_by_global_norm(tf.gradients([loss], trainable_vars), grad_max_norm) #{why|is this useful}
 minimize = optimizer.apply_gradients(zip(grads, trainable_vars))
-
-# binary_outputs = tf.to_float(outputs > 0)
-# errors = tf.not_equal(binary_outputs, ys)
-# cost = tf.reduce_sum(tf.to_float(errors)) / batch_size
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -45,14 +71,14 @@ with tf.Session() as sess:
     for i in itertools.count():
         # feed task to the ntm
         x_, y_ = poly_task.next_batch()
-        # b = sess.run([a], feed_dict={xs: x_, ys: y_})
         tr_loss[i], outputs_, _ = sess.run([loss, outputs, minimize], feed_dict={xs: x_, ys: y_})
-        #print(np.mean(np.sign(outputs_) == np.sign(y_)))
-        #print(np.mean(np.sign(y_) * .5 + .5))
-        outputs_ = outputs_.reshape(32, 64)
-        y_ = y_.reshape(32, 64)
-        pprint(list(zip(x_[0,:,0], x_[0,:,1], y_[0], outputs_[0], abs(outputs_[0] - y_[0]))), width=200)
+        outputs_ = outputs_.reshape(batch_size, input_length)
+        y_ = y_.reshape(batch_size, input_length)
+
         last = list(tr_loss.values())[-10:]
+        # pprint(list(zip(x_[0,:,0], x_[0,:,1], y_[0], outputs_[0], abs(outputs_[0] - y_[0]))), width=200)
+        if i % 100 == 0:
+            np.save(f'{mann}1', tr_loss)
         print(i, np.mean(last))
         plot(tr_loss)
 
@@ -130,4 +156,12 @@ next steps
 * compare to a vainilla LSTM
 
 
+PolyTask
+mann = True, input_length = 64, lr = 1e-2
+100: 3. 300: .3
+mann = False
+Comparable performance
+mann = False, batch_size = 128
+
+it would be great to have a command to copy the last n commands (using the top arrow n * n times bothers me)
 '''

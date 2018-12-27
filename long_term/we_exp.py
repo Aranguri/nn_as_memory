@@ -1,5 +1,5 @@
 from utils import *
-from task import DictTask
+from task import LoadedDictTask, DictTask
 import numpy as np
 
 same_sen, diff_sen, n = [], [], 10
@@ -8,7 +8,8 @@ for i in range(n):
     print(i)
     #Exp 1: similarity between a name vector and a word from the definition
     dict_task = DictTask(1)
-    x, y = dict_task.next_batch()
+    x, y, _ = dict_task.next_batch()
+    x, y = x.squeeze(), y.squeeze()
     for w in x:
         same_sen.append(cosine_distance(w, y))
 
@@ -22,6 +23,7 @@ for i in range(n):
 
     v1 = dict_task.weights[w1]
     v2 = dict_task.weights[w2]
+
     diff_sen.append(cosine_distance(v1, v2))
 
 print(np.mean(same_sen))

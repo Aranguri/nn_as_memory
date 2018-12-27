@@ -3,30 +3,29 @@ import time
 import numpy as np
 import tensorflow as tf
 from keras.datasets import mnist
-from utils import *
 import matplotlib.pyplot as plt
 from mlxtend.data import loadlocal_mnist
-'''
+import sys
+sys.path.append('../')
+from utils import *
+from memory_cell_nn import MemoryNN
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 x_train = x_train.reshape(-1, 784)
 x_train = np.array([x_train[y_train == i][:5000] for i in range(10)])
 xs = np.swapaxes(x_train, 0, 1)
-ps(xs)
-s
+'''
 xs, ys = loadlocal_mnist(
     images_path='/home/aranguri/Desktop/dev/nns/datasets/gzip/emnist-byclass-train-images-idx3-ubyte',
     labels_path='/home/aranguri/Desktop/dev/nns/datasets/gzip/emnist-byclass-train-labels-idx1-ubyte')
-
-xs = np.load('emnist_x.npy')
-ys = np.load('emnist_y.npy')
+'''
+xs = np.load('../data/emnist_x.npy')
+ys = np.load('../data/emnist_y.npy')
 
 xs_by_class = np.array([xs[ys == y] for y in set(ys)])
 train_size = min([x.shape[0] for x in xs_by_class])
 xs = np.array([x[:train_size] for x in xs_by_class])
 xs = np.swapaxes(xs, 0, 1)
-ps(xs)
-'''
 
 '''
 next steps:
@@ -46,8 +45,7 @@ what does the batch_size mean?
 it's interesting, the model learns to create matter and anti matter
 '''
 
-'''
-# batch_size = 1
+batch_size = 1
 input_length = 8
 h_lengths = [input_length, 20, 40]
 memory_length = xs.shape[1]
@@ -56,8 +54,8 @@ reg_bias = tf.constant(30, dtype=tf.float32)
 
 basis = tf.get_variable('basis', [input_length, memory_size])
 ys = tf.placeholder(tf.float32, [memory_length, memory_size])
-memory = MemoryCell(basis, h_lengths, memory_length, memory_size)
-output = memory()
+memory = MemoryNN(basis, h_lengths, memory_length, memory_size, batch_size)
+output = memory.read()
 
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
 loss = tf.losses.mean_squared_error(output, ys)
@@ -67,28 +65,27 @@ amount = tf.reduce_sum(tf.to_float(memory.bs[2] > 1e-3))
 minimize = optimizer.minimize(loss)
 
 with tf.Session() as sess:
-sess.run(tf.global_variables_initializer())
-tr_loss = {}
-fig = plt.figure()
-for l in itertools.count():
-for i, ys_ in enumerate(xs):
-    step = i + l * len(xs)
-    _, tr_loss[step], output_, bs_, xs_, amount_ = sess.run([minimize, loss, output, memory.bs, memory.xs, amount], feed_dict={ys: ys_})
+    sess.run(tf.global_variables_initializer())
+    tr_loss = {}
+    fig = plt.figure()
+    for l in itertools.count():
+        for i, ys_ in enumerate(xs):
+            step = i + l * len(xs)
+            _, tr_loss[step], output_, bs_, xs_, amount_ = sess.run([minimize, loss, output, memory.bs, memory.xs, amount], feed_dict={ys: ys_})
 
-    if step % 10 == 0:
-        print(f'Step: {step}. loss: {tr_loss[step]}')
-        print(bs_[0])
-        print(amount_)
+            if step % 10 == 0:
+                print(f'Step: {step}. loss: {tr_loss[step]}')
+                print(bs_[0])
+                print(amount_)
 
-    if step % 250 == 0:
-        plt.ion()
-        plt.cla()
-        for j, v in enumerate(list(xs_.values())):
-            fig.add_subplot(4, 1, 4 - j)
-            plt.imshow(v.reshape(-1, 28).T)
+            if step % 250 == 0:
+                plt.ion()
+                plt.cla()
+                for j, v in enumerate(list(xs_.values())):
+                    fig.add_subplot(4, 1, 4 - j)
+                    plt.imshow(v.reshape(-1, 28).T)
 
-        plt.pause(1e-8)
-'''
+                plt.pause(1e-8)
 
 '''
 It's interesting: the nn can't overfit to the trainig data. We could have something like regularization going on here. or maybe it's not working at all :)

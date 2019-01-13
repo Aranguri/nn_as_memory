@@ -48,6 +48,8 @@ What I don't like about RNNs is the focus on the last (or first) words.
 
 We can also work with the example usage of the word. Ie, give the usage we need to guess the word given that we had the definition (eg we have to build a function that goes from usage (with a blank in the word) to definition to look up the word.)
 
+Also: try with _very large_ memories. Like 1M. What new structures do we need to add?
+
 ## Memory ops - How does the mlp decide what to store?
 ### RNNs
 h_t = tanh(Wh_{t-1} + Vx_t)

@@ -3,7 +3,7 @@ from pearson_dict import pearson_meaning
 import pickle
 import pandas as pd
 import numpy as np
-from utils import *
+from util import *
 
 EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.50d.pickle'
 LOCAL_WORDS = '/usr/share/dict/words'

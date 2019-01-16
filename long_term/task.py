@@ -133,7 +133,7 @@ class LoadedDictTask:
         # with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
             # self.data = pickle.load(handle)
         dict_task = DictTask(batch_size)
-        self.data, self.vocab_size = dict_task.load_from_file('data/words_and_defs_1800.pickle')
+        self.data, self.vocab_size = dict_task.load_from_file('data/words_and_defs_5400.pickle')
         self.num_batches = len(self.data) - 2
         self.i = 0
 

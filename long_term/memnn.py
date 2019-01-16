@@ -5,8 +5,9 @@ learning_rate = 1e-4
 hidden_size = 512
 embeddings_size = 512
 batch_size = 8
-mem_size = 4
+mem_size = 8
 debug_steps = 50
+mode = '0'
 
 task = LoadedDictTask(batch_size * mem_size)
 
@@ -20,49 +21,49 @@ ws = tf.nn.embedding_lookup(embeddings, ws_ids)
 ds = tf.nn.embedding_lookup(embeddings, ds_ids)
 dq = tf.nn.embedding_lookup(embeddings, dq_ids)
 
-# '''#0: multiply the word embeddings of the sentence
-trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
-trans_ds = tf.layers.dense(trans_ds, hidden_size, use_bias=False)
-trans_dq = tf.layers.dense(dq, hidden_size, use_bias=False)
-similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
-# '''
+if mode == '0':
+    # similarity: multiply. encode: none
+    trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
+    trans_ds = tf.layers.dense(trans_ds, hidden_size, use_bias=False)
+    trans_dq = tf.layers.dense(dq, hidden_size, use_bias=False)
+    similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
 
-#1
-ds_reshaped = tf.reshape(ds, (batch_size * mem_size, -1, embeddings_size))
-defs = tf.concat((ds_reshaped, dq), axis=0)
+if mode[0] == '1':
+    ds_reshaped = tf.reshape(ds, (batch_size * mem_size, -1, embeddings_size))
+    defs = tf.concat((ds_reshaped, dq), axis=0)
 
-#1.1: similarity: multiply. encode: rnn
-rnn = tf.contrib.rnn.LSTMCell(hidden_size)
-outputs, _ = tf.nn.dynamic_rnn(rnn, defs, dtype=tf.float32)
+    if mode == '1.1':
+        #1.1: similarity: multiply. encode: rnn
+        rnn = tf.contrib.rnn.LSTMCell(hidden_size)
+        outputs, _ = tf.nn.dynamic_rnn(rnn, defs, dtype=tf.float32)
 
-trans_ds, trans_dq = outputs[:-batch_size, -1], outputs[-batch_size:, -1]
-# a transformation here could be useful
-trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, hidden_size))
-similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
+        trans_ds, trans_dq = outputs[:-batch_size, -1], outputs[-batch_size:, -1]
+        # a transformation here could be useful
+        trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, hidden_size))
+        similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
 
-#1.2: similarity: multiply. encode: birnn + softmax
-'''
-rnn_fw = tf.contrib.rnn.LSTMCell(hidden_size)
-rnn_bw = tf.contrib.rnn.LSTMCell(hidden_size)
-outputs, _ = tf.nn.bidirectional_dynamic_rnn(rnn_fw, rnn_bw, defs, dtype=tf.float32)
-trans_ds, trans_dq = tf.split(outputs, [batch_size * mem_size, batch_size], axis=1)
+    if mode == '1.2':
+        #1.2: similarity: multiply. encode: birnn + softmax
+        rnn_fw = tf.contrib.rnn.LSTMCell(hidden_size)
+        rnn_bw = tf.contrib.rnn.LSTMCell(hidden_size)
+        outputs, _ = tf.nn.bidirectional_dynamic_rnn(rnn_fw, rnn_bw, defs, dtype=tf.float32)
+        trans_ds, trans_dq = tf.split(outputs, [batch_size * mem_size, batch_size], axis=1)
 
-seq_length = tf.shape(trans_ds)[2]# are both seq_length equal?
-trans_ds = tf.reshape(trans_ds, (2, batch_size, mem_size, seq_length, hidden_size)) #try whether merging this and the next line changes accuracy
-trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, seq_length, 2 * hidden_size))
-trans_dq = tf.reshape(trans_dq, (batch_size, seq_length, 2 * hidden_size)) #todo:change name of trans_ds/dq vars
+        seq_length = tf.shape(trans_ds)[2]# are both seq_length equal?
+        trans_ds = tf.reshape(trans_ds, (2, batch_size, mem_size, seq_length, hidden_size)) #try whether merging this and the next line changes accuracy
+        trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, seq_length, 2 * hidden_size))
+        trans_dq = tf.reshape(trans_dq, (batch_size, seq_length, 2 * hidden_size)) #todo:change name of trans_ds/dq vars
 
-def transform(defs):
-    defs, probs = tf.split(defs, [2 * hidden_size - 1, 1], axis=-1)
-    probs = tf.nn.softmax(probs, axis=-2)
-    combined = tf.reduce_sum(defs * probs, axis=-2)
-    #add a layer dense heree
-    return combined
+        def transform(defs):
+            defs, probs = tf.split(defs, [2 * hidden_size - 1, 1], axis=-1)
+            probs = tf.nn.softmax(probs, axis=-2)
+            combined = tf.reduce_sum(defs * probs, axis=-2)
+            #add a layer dense heree
+            return combined
 
-trans_ds = transform(trans_ds)
-trans_dq = transform(trans_dq)
-similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
-'''
+        trans_ds = transform(trans_ds)
+        trans_dq = transform(trans_dq)
+        similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
 
 # Loss and accuracy
 correct_cases = tf.equal(tf.argmax(similarity, 1), tf.argmax(wq, 1))

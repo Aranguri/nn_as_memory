@@ -7,7 +7,7 @@ embeddings_size = 512
 batch_size = 8
 mem_size = 8
 debug_steps = 50
-mode = '0'
+mode = '-1'
 
 task = LoadedDictTask(batch_size * mem_size)
 
@@ -20,6 +20,9 @@ embeddings = tf.get_variable('embeddings', shape=(task.vocab_size, embeddings_si
 ws = tf.nn.embedding_lookup(embeddings, ws_ids)
 ds = tf.nn.embedding_lookup(embeddings, ds_ids)
 dq = tf.nn.embedding_lookup(embeddings, dq_ids)
+
+if mode == '-1':
+    similarity = tf.einsum('ijkl,ikl->ij', ds, dq)
 
 if mode == '0':
     # similarity: multiply. encode: none

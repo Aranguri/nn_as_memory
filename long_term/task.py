@@ -134,15 +134,18 @@ class LoadedDictTask:
             # self.data = pickle.load(handle)
         dict_task = DictTask(batch_size)
         self.data, self.vocab_size = dict_task.load_from_file('18k.pickle')
-        self.num_batches = len(self.data) - 2
+        self.dev_batches = 10 # Batches reserved for dev set.
+        self.num_batches = len(self.data) - self.dev_batches - 1
         self.i = 0
+        self.j = 1
 
     def next_batch(self):
         self.i = self.i + 1 if self.i < self.num_batches else 0
         return self.data[self.i]
 
     def dev_batch(self):
-        return self.data[-1]
+        self.j = self.j + 1 if self.j < self.dev_batches else 1
+        return self.data[-self.j]
 
 def get_words_and_defs():
     data, dict1, dict2 = [], PyDictionary().meaning, pearson_meaning

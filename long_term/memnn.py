@@ -109,11 +109,15 @@ with tf.Session() as sess:
         '''
 
         if i % debug_steps == 0:
-            feed_dict, defs1, defs2 = next_batch_wrapper(train=False)
-            dev_loss[i//debug_steps], similarity_, dev_acc[i//debug_steps] = sess.run([loss, similarity, accuracy], feed_dict)
+            temp_loss, temp_acc = np.zeros((2, task.dev_batches))
+            for j in range(task.dev_batches):
+                feed_dict, defs1, defs2 = next_batch_wrapper(train=False)
+                temp_loss[j], temp_acc[j] = sess.run([loss, accuracy], feed_dict)
 
+            dev_loss[i//debug_steps] = temp_loss.mean()
+            dev_acc[i//debug_steps] = temp_acc.mean()
             # similarity_ = np.expand_dims(np.argmax(similarity_, 1), 1)
-            correct = np.argmax(similarity_, 1) == feed_dict[wq]
+            # correct = np.argmax(similarity_, 1) == feed_dict[wq]
             debug(i, tr_acc, dev_acc, debug_steps)
             # ps(correct)
             '''

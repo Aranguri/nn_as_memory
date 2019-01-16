@@ -173,3 +173,6 @@ Params: Model 0: 6k: mem_size: 8
 Results: train = 1, dev_max = .45, dev_stable = .41
 
 My guess is that model 0 is easier and faster to train. However, it's very limited.
+
+
+We can think of books as discrete points in a very high-dimensional space. Eg there would be clusters of books that have similar topics. Consider the space as continouos. It would be great to have the "general book" where you can input some specific value for each axis, and a book is produced (I imagine it still being with discrete words. What's continouos is the _meaning_ of the book.) 

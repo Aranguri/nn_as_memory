@@ -15,9 +15,9 @@ class DictTask:
         self.batch_size = batch_size
         self.dict1 = PyDictionary().meaning
         self.dict2 = pearson_meaning
-        with open(EMBEDDINGS_PATH, 'rb') as handle:
-            self.weights = pickle.load(handle)
-        self.words_list = [x.strip().lower() for x in open(LOCAL_WORDS, 'r')]
+        # with open(EMBEDDINGS_PATH, 'rb') as handle:
+            # self.weights = pickle.load(handle)
+        # self.words_list = [x.strip().lower() for x in open(LOCAL_WORDS, 'r')]
 
     def load_from_file(self, file):
         with open(file, 'rb') as handle:

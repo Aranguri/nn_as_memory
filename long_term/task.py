@@ -146,7 +146,7 @@ class LoadedDictTask:
 
 def get_words_and_defs():
     data, dict1, dict2 = [], PyDictionary().meaning, pearson_meaning
-    words = [x.strip().lower() for x in open(WIKI_WORDS, 'r')][1:]
+    words = [x.strip().lower() for x in open(WIKI_WORDS, 'r')][75000:]
 
     for i, word in enumerate(words):
         m1 = dict1(word)
@@ -159,8 +159,10 @@ def get_words_and_defs():
 
         if i % 200 == 0:
             print (i)
-            with open(f'data/words_and_defs_{i}.pickle', 'wb') as handle:
+            with open(f'data/words_and_defs_75000_{i}.pickle', 'wb') as handle:
                 pickle.dump(data, handle)
+
+get_words_and_defs()
 
 def store_tasks(num_batches, batch_size, start=0):
     dict_task = DictTask(batch_size)

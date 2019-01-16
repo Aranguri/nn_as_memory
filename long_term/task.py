@@ -7,7 +7,7 @@ from util import *
 
 EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.50d.pickle'
 LOCAL_WORDS = '/usr/share/dict/words'
-WIKI_WORDS = 'wiki-100k.txt'
+WIKI_WORDS = 'wiki-100k.notatxt'
 
 class DictTask:
     def __init__(self, batch_size):

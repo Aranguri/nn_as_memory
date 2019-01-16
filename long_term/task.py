@@ -133,7 +133,7 @@ class LoadedDictTask:
         # with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
             # self.data = pickle.load(handle)
         dict_task = DictTask(batch_size)
-        self.data, self.vocab_size = dict_task.load_from_file('data/words_and_defs_5800.pickle')
+        self.data, self.vocab_size = dict_task.load_from_file('18k.pickle')
         self.num_batches = len(self.data) - 2
         self.i = 0
 
@@ -146,7 +146,7 @@ class LoadedDictTask:
 
 def get_words_and_defs():
     data, dict1, dict2 = [], PyDictionary().meaning, pearson_meaning
-    words = [x.strip().lower() for x in open(WIKI_WORDS, 'r')][75000:]
+    words = [x.strip().lower() for x in open(WIKI_WORDS, 'r')][1:]
 
     for i, word in enumerate(words):
         m1 = dict1(word)
@@ -159,10 +159,8 @@ def get_words_and_defs():
 
         if i % 200 == 0:
             print (i)
-            with open(f'data/words_and_defs_75000_{i}.pickle', 'wb') as handle:
+            with open(f'data/words_and_defs_{i}.pickle', 'wb') as handle:
                 pickle.dump(data, handle)
-
-get_words_and_defs()
 
 def store_tasks(num_batches, batch_size, start=0):
     dict_task = DictTask(batch_size)

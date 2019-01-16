@@ -4,14 +4,10 @@ from util import *
 learning_rate = 1e-4
 hidden_size = 512
 embeddings_size = 512
-batch_size = 8
+batch_size = 32
 mem_size = 8
 debug_steps = 50
-<<<<<<< HEAD
 mode = '-1'
-=======
-mode = '1.1'
->>>>>>> 7259b40a8d702ffda58ace2f9b719f2d5867e681
 
 task = LoadedDictTask(batch_size * mem_size)
 

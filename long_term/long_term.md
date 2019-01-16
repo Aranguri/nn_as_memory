@@ -178,7 +178,7 @@ My guess is that model 0 is easier and faster to train. However, it's very limit
 We can think of books as discrete points in a very high-dimensional space. Eg there would be clusters of books that have similar topics. Consider the space as continouos. It would be great to have the "general book" where you can input some specific value for each axis, and a book is produced (I imagine it still being with discrete words. What's continouos is the _meaning_ of the book.)
 
 # 18k test
-## -1
+## -1 (this is the same result for one batch for dev as for ten batches)
 stable after 20k iterations
 train: 1. dev: .675
 trained for around 75k
@@ -188,3 +188,5 @@ stable after 15 iterations
 train: 1. dev: .57
 (This is surprising)
 trained for around 75k
+
+## 1.1

@@ -31,7 +31,6 @@ similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
 ds_reshaped = tf.reshape(ds, (batch_size * mem_size, -1, embeddings_size))
 defs = tf.concat((ds_reshaped, dq), axis=0)
 
-'''
 #1.1: similarity: multiply. encode: rnn
 rnn = tf.contrib.rnn.LSTMCell(hidden_size)
 outputs, _ = tf.nn.dynamic_rnn(rnn, defs, dtype=tf.float32)
@@ -40,9 +39,9 @@ trans_ds, trans_dq = outputs[:-batch_size, -1], outputs[-batch_size:, -1]
 # a transformation here could be useful
 trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, hidden_size))
 similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
-'''
 
 #1.2: similarity: multiply. encode: birnn + softmax
+'''
 rnn_fw = tf.contrib.rnn.LSTMCell(hidden_size)
 rnn_bw = tf.contrib.rnn.LSTMCell(hidden_size)
 outputs, _ = tf.nn.bidirectional_dynamic_rnn(rnn_fw, rnn_bw, defs, dtype=tf.float32)
@@ -63,6 +62,7 @@ def transform(defs):
 trans_ds = transform(trans_ds)
 trans_dq = transform(trans_dq)
 similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
+'''
 
 # Loss and accuracy
 correct_cases = tf.equal(tf.argmax(similarity, 1), tf.argmax(wq, 1))

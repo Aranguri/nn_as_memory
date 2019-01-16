@@ -161,3 +161,8 @@ what does it mean that tf.layers.dense((2x3x4), 5) yields 2x3x5. start thinking 
 It would be interesting to work in some model of memory that is stable - - that is easy to train - - not like the ntm
 
 We should allow multiple passes, for instance if the def is "past participle of smell" then the model needs to look up for smell.
+
+
+As we recollect our data, we can test how the model performs with little data. We have around 1.5k cases. Using memsize of 4 gives us 375 cases.
+
+Let's debug our implementation of the 1 + 4 methods by seeing if they can overfit to 100 cases.

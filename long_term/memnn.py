@@ -1,27 +1,68 @@
 from task import LoadedDictTask, DictTask
 from util import *
 
-# dict_task = DictTask(1)
 embeddings_size = 50
 hidden_size = 512
 task_batch_size = 32
 mem_size = 4
 debug_steps = 50
-batch_size = task_batch_size // mem_size
+
+# dict_task = DictTask(1)
 task = LoadedDictTask(task_batch_size, 140)
+batch_size = task_batch_size // mem_size
 
 ws = tf.placeholder(tf.float32, (batch_size, mem_size, embeddings_size))
 ds = tf.placeholder(tf.float32, (batch_size, mem_size, None, embeddings_size))
 wq = tf.placeholder(tf.int32, (batch_size, mem_size))
 dq = tf.placeholder(tf.float32, (batch_size, None, embeddings_size))
 
-trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False) #check: do we transform every entry in the matrix?
+# '''#0: multiply the word embeddings of the sentence
+trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
+trans_ds = tf.layers.dense(trans_ds, hidden_size, use_bias=False)
 trans_dq = tf.layers.dense(dq, hidden_size, use_bias=False)
 similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
+# '''
 
+#1
+ds_reshaped = tf.reshape(ds, (batch_size * mem_size, -1, embeddings_size))
+defs = tf.concat((ds_reshaped, dq), axis=0)
+
+'''
+#1.1: similarity: multiply. encode: rnn
+rnn = tf.contrib.rnn.LSTMCell(hidden_size)
+outputs, _ = tf.nn.dynamic_rnn(rnn, defs, dtype=tf.float32)
+
+trans_ds, trans_dq = outputs[:-batch_size, -1], outputs[-batch_size:, -1]
+# a transformation here could be useful
+trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, hidden_size))
+similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
+'''
+
+#1.2: similarity: multiply. encode: birnn + softmax
+rnn_fw = tf.contrib.rnn.LSTMCell(hidden_size)
+rnn_bw = tf.contrib.rnn.LSTMCell(hidden_size)
+outputs, _ = tf.nn.bidirectional_dynamic_rnn(rnn_fw, rnn_bw, defs, dtype=tf.float32)
+trans_ds, trans_dq = tf.split(outputs, [batch_size * mem_size, batch_size], axis=1)
+
+seq_length = tf.shape(trans_ds)[2]# are both seq_length equal?
+trans_ds = tf.reshape(trans_ds, (2, batch_size, mem_size, seq_length, hidden_size)) #try whether merging this and the next line changes accuracy
+trans_ds = tf.reshape(trans_ds, (batch_size, mem_size, seq_length, 2 * hidden_size))
+trans_dq = tf.reshape(trans_dq, (batch_size, seq_length, 2 * hidden_size)) #todo:change name of trans_ds/dq vars
+
+def transform(defs):
+    defs, probs = tf.split(defs, [2 * hidden_size - 1, 1], axis=-1)
+    probs = tf.nn.softmax(probs, axis=-2)
+    combined = tf.reduce_sum(defs * probs, axis=-2)
+    #add a layer dense heree
+    return combined
+
+trans_ds = transform(trans_ds)
+trans_dq = transform(trans_dq)
+similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
+
+# Loss and accuracy
 correct_cases = tf.equal(tf.argmax(similarity, 1), tf.argmax(wq, 1))
 accuracy = tf.reduce_mean(tf.to_float(correct_cases))
-
 loss = tf.losses.softmax_cross_entropy(wq, similarity)
 optimizer = tf.train.AdamOptimizer()
 minimize = optimizer.minimize(loss)

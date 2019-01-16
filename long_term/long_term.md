@@ -70,3 +70,94 @@ Retrieving a memory: entries in U that have non-zero values
 * Min dev dist: .32 q   5 (lr 1e-4, h1:100, h2:100, ffnn, @2000)
 * Min dev dist: .28 (lr 1e-4, h1:100, h2:100, ffnn, @12000)
 * Min dev dist: .27 (lr 1e-4, h1:100, h2:100, ffnn, +@20000)
+
+We want something that given a sentence, it searches thru lots of sentences and it retrieves the word corresponding to that definition.
+
+We'd like to start with almost a perfect accuracy on the task of remembering 10 sentences. The task is to retrieve them selectively. it'd be great to do this with as little data as possible, though Idk how I can achieve that.
+
+Bare comparison of the sentences, gives around .5 in dev data.
+Next steps: better comparison, larger dataset.
+
+So: we want to compare two sentences.
+sentence = [WE(word) for word in sentence]
+
+def similarity(e1, e2):
+    #.1
+    out = e1.T.dot(e2)
+
+    #.2
+    out = MLP([e1, e2, e1 - e2, e1 * e2, e1Ae2])
+
+    return out
+
+#1
+def encode(sentence):
+    states = np.zeros((seq_length, embeddings_size))
+    for i in range(num_rnns):
+        states[i], _ = BiRNN_i(sentence)
+    #states is num_rnns x seq_length x 2 x hidden_size
+    transform(states)
+    #states is num_rnns x seq_length x hidden_size
+
+    #1.1 (we could also calculate probs with another BiRNN)
+    probs, states = states
+    #states is num_rnns x seq_length x (hidden_size - 1)
+    #probs is num_rnns x seq_length x 1
+    #1.1.1
+    state = softargmax(states, p=probs)
+    #1.1.2
+    state = max(states, p=probs)
+
+    #1.2
+    _, right_state = RNN_left(sentence)
+    _, left_state = RNN_right(sentence)
+    state = concat(left_state, right_state)
+    state = MLP(state)
+
+    return state
+
+#2
+def encode(sentence):
+    starting_points = [0, 3, ..., len(sentence) - 1] #this 'barredores' could be evenly spaced.
+    out = np.zeros()
+    for i in range(n):
+        _, final_state = RNN_i(sentence, starting_point=starting_points[i])
+        out[i] = final_state
+    return out
+
+similarity(encode(s1), encode(s2))
+
+#experiment: how useful is to have (a - b), aAb, a * b? Compare usefulness for different tasks (this could be interesting to do in Ashwin thing)
+max pool, softargmax, is maxpool differentiable?
+
+__ Next tasks:
+* generate a larger dataset
+* get a simple way of comparing sentences which is better than comparing word by word.
+    * first: pass an rnn through all the data and compute the similarity between the two hidden states.
+    * first point twentyfive: pass a rnn through all the data and instead of just keeping the last state of the rnn, compute a softmax in all the states.
+    * first point twentyfive point 0625: use the left and right final states of the rnns to compute the similarity, not just the right state
+    * first point five: pass a birnn through all the data and compute the bla bla thing
+    * second: the #1 above
+
+make a model that counts the similar words between each def and def'. then returns def wiuth max count. also try avoidinig counting common words
+
+Note about the training set: there are some instances of the task that are impossible. We can take this as an advantage in the following way. We can let the model say "I don't know" and we just skip that example. we don't know the specific amount of examples that the model can't know, but we can test a human on 300 examples and calculate the proportion of IDKs. That quantity will probably extrapolate to the general case. The interesting thing though is that the ones that do make sense are similar but do not share that many words. And even if they share some words, it isn't easy to tell that they are referring to the same word. Eg
+> the branch of engineering that deals with things smaller than 100 nanometers (especially with the manipulation of individual molecules
+the science of developing and making extremely small but powerful machines
+
+Here we could say that the only non-common word shared is smaller and small, but nothing else.
+
+And there would probably be some other sentence that starts with the same words as the second sentence above. (eg "the science of developing powerful machines that are useful for large computations.")
+
+Try combining the birnn representation before concatenating everything to the nn. Also, think whether this could be better/worse/equal to just adding a new layer. Pros: left and right representations could be good to be combined, they together have information of all the sentence. Cons: we are losing useful information eg we can't directly compare left rnn representaiton in position i with that of position i+1. That could give us useful information about what happened in a specific word.
+
+is it possible/useful to go from char-level representation to word embeddings? how would that look like
+
+everythign is great after meeting people :)
+** espero no pasarme toda la vida poniendome buzos **
+
+what does it mean that tf.layers.dense((2x3x4), 5) yields 2x3x5. start thinking about it in 2d and then go to 3d and then 17d (or xd for that matter :)
+
+It would be interesting to work in some model of memory that is stable - - that is easy to train - - not like the ntm
+
+We should allow multiple passes, for instance if the def is "past participle of smell" then the model needs to look up for smell.

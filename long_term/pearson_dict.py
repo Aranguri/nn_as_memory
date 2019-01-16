@@ -9,7 +9,7 @@ def pearson_meaning(word):
            for results in values['results']:
                dict_ = results['datasets'][0]
                defs = results['senses'][0]['definition']
-               return defs if type(defs) == str else defs[0]
+               return results#defs if type(defs) == str else defs[0]
            return None
     except:
         return None

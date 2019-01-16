@@ -86,15 +86,17 @@ def next_batch_wrapper(train=True):
     query_ixs = np.random.randint(mem_size, size=(batch_size,))
     query_words = one_hot(query_ixs, mem_size)
     query_defs = defs2[range(batch_size), query_ixs]
+    query_m2 = m2[range(batch_size), query_ixs]
+    query_w = np.array(w)[query_ixs]
 
-    return {ws_ids: words, ds_ids: defs1, wq: query_words, dq_ids: query_defs}, m1, m2
+    return {ws_ids: words, ds_ids: defs1, wq: query_words, dq_ids: query_defs}, m1, query_m2, query_w
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     tr_acc, dev_loss, dev_acc, sim = {}, {}, {}, {}
 
     for i in itertools.count():
-        feed_dict, _, _ = next_batch_wrapper()
+        feed_dict = next_batch_wrapper()[0]
         tr_acc[i], similarity_, _ = sess.run([accuracy, similarity, minimize], feed_dict)
 
         '''
@@ -111,8 +113,14 @@ with tf.Session() as sess:
         if i % debug_steps == 0:
             temp_loss, temp_acc = np.zeros((2, task.dev_batches))
             for j in range(task.dev_batches):
-                feed_dict, defs1, defs2 = next_batch_wrapper(train=False)
-                temp_loss[j], temp_acc[j] = sess.run([loss, accuracy], feed_dict)
+                feed_dict, m1, qm2, qw = next_batch_wrapper(train=False)
+                temp_loss[j], temp_acc[j], similarity_ = sess.run([loss, accuracy, similarity], feed_dict)
+            print(similarity_[0])
+            print(m1[0])
+            print(qm2[0])
+            print(qw[0])
+            print()
+
 
             dev_loss[i//debug_steps] = temp_loss.mean()
             dev_acc[i//debug_steps] = temp_acc.mean()

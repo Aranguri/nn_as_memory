@@ -182,10 +182,13 @@ We can think of books as discrete points in a very high-dimensional space. Eg th
 stable after 20k iterations
 train: 1. dev: .675
 trained for around 75k
+### Comments
+This works surprisingly well, taking into account that we are just comparing words that are in the same position. Let's understand how it works by seeing where it's correct/where it fails.
+
 
 ## 0
 stable after 15 iterations
-train: 1. dev: .57
+train: 1. dev: .54
 (This is surprising)
 trained for around 75k
 

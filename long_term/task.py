@@ -4,6 +4,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from util import *
+from keras.preprocessing.sequence import pad_sequences
 
 EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.50d.pickle'
 LOCAL_WORDS = '/usr/share/dict/words'
@@ -21,8 +22,63 @@ class DictTask:
     def load_from_file(self, file):
         with open(file, 'rb') as handle:
             dataset = pickle.load(handle)
-        ps(dataset)
-        # for case in dataset:
+
+        new_dataset, vocab, word_to_i = [], set([]), {}
+
+        for m1, m2, w in dataset:
+            # Get specific defs
+            first_key = list(m1.keys())[0]
+            m1 = m1[first_key][0]
+
+            m2 = m2['senses'][0]['definition']
+            m2 = m2 if type(m2) == str else m2[0]
+
+            # Tokenize
+            new_m1, new_m2 = [], []
+
+            for word in m1.split():
+                if word not in word_to_i.keys():
+                    word_to_i[word] = len(word_to_i)
+                new_m1.append(word_to_i[word])
+
+            for word in m2.split():
+                if word not in word_to_i.keys():
+                    word_to_i[word] = len(word_to_i)
+                new_m2.append(word_to_i[word])
+
+            if w not in word_to_i.keys():
+                word_to_i[w] = len(word_to_i)
+            new_w = word_to_i[w]
+
+            new_dataset.append((new_m1, new_m2, new_w, m1, m2, w))
+
+        batches, i = [], 0
+
+        while i + self.batch_size < len(new_dataset):
+            batch = [[], [], [], [], [], []]
+
+            for j in range(self.batch_size):
+                new_m1, new_m2, new_w, m1, m2, w = new_dataset[i + j]
+                batch[0].append(new_m1)
+                batch[1].append(new_m2)
+                batch[2].append(new_w)
+                batch[3].append(m1)
+                batch[4].append(m2)
+                batch[5].append(w)
+
+            i += j
+            new_batch = [[], [], [], []]
+            max_length1 = np.max([np.shape(v)[0] for v in batch[0]])
+            max_length2 = np.max([np.shape(v)[0] for v in batch[1]])
+            max_length = np.maximum(max_length1, max_length2)
+            new_batch[0] = pad_sequences(batch[0], max_length, padding='post')
+            new_batch[1] = pad_sequences(batch[1], max_length, padding='post')
+            new_batch[2] = batch[2]
+            new_batch[3] = batch[3:6]
+
+            batches.append(new_batch)
+
+        return batches[:-1], len(word_to_i)
 
     def embed(self, word):
         if word not in self.weights.keys():
@@ -73,10 +129,12 @@ class DictTask:
         return sorted(dists)[:10]
 
 class LoadedDictTask:
-    def __init__(self, batch_size, num_batches):
-        with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
-            self.data = pickle.load(handle)
-        self.num_batches = num_batches - 2
+    def __init__(self, batch_size):
+        # with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
+            # self.data = pickle.load(handle)
+        dict_task = DictTask(batch_size)
+        self.data, self.vocab_size = dict_task.load_from_file('data/words_and_defs_1800.pickle')
+        self.num_batches = len(self.data) - 2
         self.i = 0
 
     def next_batch(self):
@@ -104,30 +162,6 @@ def get_words_and_defs():
             with open(f'data/words_and_defs_{i}.pickle', 'wb') as handle:
                 pickle.dump(data, handle)
 
-get_words_and_defs()
-
-def get_case():
-    pass
-
-def get_batch():
-    case = list(zip(*[self.next_case() for i in range(self.batch_size)]))
-    x1, x2, y, label = np.array(case[0]), np.array(case[1]), np.array(case[2]), case[3:6]
-    max_length1 = np.max([v.shape[0] for v in x1])
-    max_length2 = np.max([v.shape[0] for v in x2])
-    max_length = np.maximum(max_length1, max_length2)
-
-    def pad(x):
-        for i in range(x.shape[0]):
-            padding = ((0, max_length - x[i].shape[0]), (0, 0))
-            x[i] = np.pad(x[i], padding, 'constant')
-        x = np.array([np.array(v) for v in x])
-        return x
-
-    return pad(x1), pad(x2), y, label
-
-def get_dataset():
-    pass
-
 def store_tasks(num_batches, batch_size, start=0):
     dict_task = DictTask(batch_size)
     data = []
@@ -139,7 +173,6 @@ def store_tasks(num_batches, batch_size, start=0):
         data.append(dict_task.next_batch())
         with open(f'data/tasks_{num_batches}_{batch_size}_{i}.pickle', 'wb') as handle:
             pickle.dump(data, handle)
-
 
 '''
 from task import DictTask

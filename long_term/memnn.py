@@ -1,20 +1,24 @@
 from task import LoadedDictTask, DictTask
 from util import *
 
-embeddings_size = 50
+learning_rate = 1e-4
 hidden_size = 512
-task_batch_size = 32
+embeddings_size = 512
+batch_size = 8
 mem_size = 4
 debug_steps = 50
 
-# dict_task = DictTask(1)
-task = LoadedDictTask(task_batch_size, 140)
-batch_size = task_batch_size // mem_size
+task = LoadedDictTask(batch_size * mem_size)
 
-ws = tf.placeholder(tf.float32, (batch_size, mem_size, embeddings_size))
-ds = tf.placeholder(tf.float32, (batch_size, mem_size, None, embeddings_size))
+ws_ids = tf.placeholder(tf.int32, (batch_size, mem_size))
+ds_ids = tf.placeholder(tf.int32, (batch_size, mem_size, None))
 wq = tf.placeholder(tf.int32, (batch_size, mem_size))
-dq = tf.placeholder(tf.float32, (batch_size, None, embeddings_size))
+dq_ids = tf.placeholder(tf.int32, (batch_size, None))
+
+embeddings = tf.get_variable('embeddings', shape=(task.vocab_size, embeddings_size))
+ws = tf.nn.embedding_lookup(embeddings, ws_ids)
+ds = tf.nn.embedding_lookup(embeddings, ds_ids)
+dq = tf.nn.embedding_lookup(embeddings, dq_ids)
 
 # '''#0: multiply the word embeddings of the sentence
 trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
@@ -64,22 +68,22 @@ similarity = tf.einsum('ijk,ik->ij', trans_ds, trans_dq)
 correct_cases = tf.equal(tf.argmax(similarity, 1), tf.argmax(wq, 1))
 accuracy = tf.reduce_mean(tf.to_float(correct_cases))
 loss = tf.losses.softmax_cross_entropy(wq, similarity)
-optimizer = tf.train.AdamOptimizer()
+optimizer = tf.train.AdamOptimizer(learning_rate)
 minimize = optimizer.minimize(loss)
 
 def next_batch_wrapper(train=True):
     defs1, defs2, words, (m1, m2, w) = task.next_batch() if train else task.dev_batch()
 
-    defs1 = defs1.reshape(batch_size, mem_size, -1, embeddings_size)
-    defs2 = defs2.reshape(batch_size, mem_size, -1, embeddings_size)
-    words = words.reshape(batch_size, mem_size, embeddings_size)
+    defs1 = defs1.reshape(batch_size, mem_size, -1)
+    defs2 = defs2.reshape(batch_size, mem_size, -1)
+    words = np.reshape(words, (batch_size, mem_size))
     m1 = np.array(m1).reshape(batch_size, mem_size)
     m2 = np.array(m2).reshape(batch_size, mem_size)
     query_ixs = np.random.randint(mem_size, size=(batch_size,))
     query_words = one_hot(query_ixs, mem_size)
     query_defs = defs2[range(batch_size), query_ixs]
 
-    return {ws: words, ds: defs1, wq: query_words, dq: query_defs}, m1, m2
+    return {ws_ids: words, ds_ids: defs1, wq: query_words, dq_ids: query_defs}, m1, m2
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())

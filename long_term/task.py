@@ -10,6 +10,7 @@ from util import *
 from keras.preprocessing.sequence import pad_sequences
 
 EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.300d.pickle'
+EMBEDDINGS_PATH = '../../datasets/glove/embeddings_300.pickle'
 LOCAL_WORDS = '/usr/share/dict/words'
 WIKI_WORDS = 'wiki-100k.notatxt'
 

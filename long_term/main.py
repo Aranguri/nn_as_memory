@@ -1,5 +1,7 @@
 from task import LoadedDictTask, DictTask
 from util import *
+import sys
+sys.path.append('../../')
 
 learning_rate = 1e-4
 hidden_size = 512

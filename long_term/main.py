@@ -100,7 +100,7 @@ def next_batch_wrapper(train=True):
 
 with tf.Session() as sess:
     glove_embeddings = task.glove_embeddings()
-    sess.run(tf.global_variables_initializer(), feed_dict={embeddings_init: glove_embedding})
+    sess.run(tf.global_variables_initializer(), feed_dict={embeddings_init: glove_embeddings})
     tr_acc, dev_loss, dev_acc, sim = {}, {}, {}, {}
 
     for i in itertools.count():

@@ -7,7 +7,7 @@ import random
 from util import *
 from keras.preprocessing.sequence import pad_sequences
 
-EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.50d.pickle'
+EMBEDDINGS_PATH = '../../nns/datasets/glove/glove.6B.300d.pickle'
 LOCAL_WORDS = '/usr/share/dict/words'
 WIKI_WORDS = 'wiki-100k.notatxt'
 
@@ -23,7 +23,7 @@ class DictTask:
     def load_from_file(self, file):
         with open(file, 'rb') as handle:
             dataset = pickle.load(handle)
-        random.shuffle(dataset)
+        # random.shuffle(dataset)
         new_dataset, vocab, word_to_i = [], set([]), {}
 
         for m1, m2, w in dataset:
@@ -35,25 +35,26 @@ class DictTask:
             m2 = m2['senses'][0]['definition']
             m2 = m2 if type(m2) == str else m2[0]
             '''
+            cleaned_m1, cleaned_m2 = clean_text(m1), clean_text(m2)
 
             # Tokenize
             new_m1, new_m2 = [], []
 
-            for word in m1.split():
+            for word in cleaned_m1:
                 if word not in word_to_i.keys():
-                    word_to_i[word] = len(word_to_i)
+                    word_to_i[word] = len(word_to_i) + 1
                 new_m1.append(word_to_i[word])
 
-            for word in m2.split():
+            for word in cleaned_m2:
                 if word not in word_to_i.keys():
-                    word_to_i[word] = len(word_to_i)
+                    word_to_i[word] = len(word_to_i) + 1
                 new_m2.append(word_to_i[word])
 
             if w not in word_to_i.keys():
-                word_to_i[w] = len(word_to_i)
+                word_to_i[w] = len(word_to_i) + 1
             new_w = word_to_i[w]
 
-            new_dataset.append((new_m1, new_m2, new_w, m1, m2, w))
+            new_dataset.append((new_m1, new_m2, new_w, cleaned_m1, cleaned_m2, w))
 
         batches, i = [], 0
 
@@ -159,13 +160,13 @@ class LoadedDictTask:
     def gen_glove_embeddings(self):
         with open(EMBEDDINGS_PATH, 'rb') as handle:
             self.weights = pickle.load(handle)
-        embeddings = np.zeros((0, 50))
+        embeddings = np.zeros((0, 300))
         embeddings = np.array([self.embed(word) for word in self.word_to_i.keys()])
-        with open('embeddings.pickle', 'wb') as handle:
+        with open('embeddings_300.pickle', 'wb') as handle:
            pickle.dump(embeddings, handle)
 
     def glove_embeddings(self):
-        with open('embeddings.pickle', 'rb') as handle:
+        with open('embeddings_300.pickle', 'rb') as handle:
             return pickle.load(handle)
 
 def get_words_and_defs():

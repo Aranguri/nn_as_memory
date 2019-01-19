@@ -188,7 +188,7 @@ def clean_text(text):
     #TODO: add spaces between numbers. eg 1954 => 1 9 5 4
     text = text.replace('  ', ' ')
     words = text.split(' ')
-    words = [w for w in words if w.isalpha()]
+    # words = [w for w in words if w.isalpha()]
     return words
 
 def tokenize_words_simple(words):
@@ -226,4 +226,3 @@ def debug(i, tr, dev, debug_steps, plot='none'):
 
     if plot == 'tr' or plot == 'both': smooth_plot(tr, 300)
     if plot == 'dev' or plot == 'both': smooth_plot(dev, 300)
-

@@ -264,3 +264,18 @@ when embeddings arrive
 
 
 how good is jag10 from jag20? drew?
+sign to slack nlp account
+
+Lesson: it doesn't seem that good to work on my own datasets if there are other datasets that can fulfill my requirements. Creating a dataset takes a lot of time, and we also can't compare with other's work.
+
+## Experiment: comparing sentences word by word
+In this experiment, we use one of the most simple methods of comparing sentences. We first compute a representation for each word and then we compute the similarity between the corresponding word of each sentence. For instance, say we are comparing "This is a bottle" with "There is a can." The first thing we compare is the representation for the word "there" with that of "this." Then we compare "is" with "is." And so on.
+
+This is clearly an incorrect approach. For instance, "Clearly, it is a cat" and "It is a cat" would be very different in this similarity measure, but they shouldn't. However, it could work as a baseline.
+
+The only decision we can make here is how we initialize the representations for the words (ie the word embeddings.) If we don't train the embeddings, a random initialization gives almost the same performance as initializing it with the GloVe word embeddings. The performance is slightly above chance (performance: 13.0% - 13.5%. chance: 12.5%). It seems weird to me that GloVe doesn't add any improvement over random vectors. This could be because GloVe isn't correctly working.
+
+## Thought
+It could make sense to continue with a simpler task.
+
+Lesson: from now on, try to be more organized in this notes and the code I write. Not that much, though. 

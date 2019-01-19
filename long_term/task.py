@@ -27,11 +27,13 @@ class DictTask:
 
         for m1, m2, w in dataset:
             # Get specific defs
+            '''
             first_key = list(m1.keys())[0]
             m1 = m1[first_key][0]
 
             m2 = m2['senses'][0]['definition']
             m2 = m2 if type(m2) == str else m2[0]
+            '''
 
             # Tokenize
             new_m1, new_m2 = [], []
@@ -133,7 +135,7 @@ class LoadedDictTask:
         # with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
             # self.data = pickle.load(handle)
         dict_task = DictTask(batch_size)
-        self.data, self.vocab_size = dict_task.load_from_file('18k.pickle')
+        self.data, self.vocab_size = dict_task.load_from_file('54k.pickle')
         self.dev_batches = 10 # Batches reserved for dev set.
         self.num_batches = len(self.data) - self.dev_batches - 1
         self.i = 0

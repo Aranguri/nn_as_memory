@@ -193,3 +193,59 @@ train: 1. dev: .54
 trained for around 75k
 
 ## 1.1
+
+
+Before going to more complex models, it makes sense to understand the performance of the simpler models. Without doing this, we can't know whether the more complex model is good or not.
+
+Problem 1: we aren't normalizing by the length of the sentence. We aren't comparing
+
+My theory on why the models 0 and 1 don't generalize well to dev set. They are much more complex, so they can easily overfit to the training data without that much learning. (and they do overfit, as we see )
+
+steps
+- get a larger dataset (download two dicts)
+- test different models -1, 0, 1.1, 1.2
+- what if we add word embeddings?
+(Make the experiments such that I could tell what's the result and I can leave them runnign for a long time.)
+- Little data
+- Understand how the model -1 reaches that performance.
+
+Memories (and returing the correct output,) seems to be a chain reaction. Given the incorrect first memory, and you can spend minutes trying to come up with the memory, even if it was something as easy as a password that I've written around 1k. It is related to being a linked list.  
+
+
+Also for the ideas: the net of interconnected concepts we were thinking with nico
+
+Next steps:
+
+The opted-to-json I have in /tests
+
+https://github.com/Barjak/OED_unpack_tools.py
+
+https://github.com/shenfeng/dictionary/tree/master/src
+
+
+import json
+import string
+decoder = json.JSONDecoder()
+
+defs = {}
+for char in string.ascii_lowercase:
+    defs.update(decoder(f'OPTED-to-JSON/json/{char}.json'))
+
+var fs = require('fs');
+fs.readFile('Adjective.js', 'utf8', function(err, contents) {
+    content = JSON.stringify(contents)
+});
+fs.writeFile("adjective.json", content, function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    console.log("The file was saved!");
+});
+
+
+Future: wiktionary + wikidata. (this should be a large dataset, but only start with this after playing more with the architectures.x it doesn't make sense to spend so much time in the dataset.)
+
+Now it's time to spend on the code and not on datasets. For the future it could be nice to do (webster | wiktionary) + oxford scraped
+
+Compare the perforamnce of datasets of 54k vs 18k. In that way we can see how a dataset of 200k will behave. Also, enabling the model to lookup for more definitions will be great.

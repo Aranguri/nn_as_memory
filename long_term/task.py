@@ -4,6 +4,8 @@ import pickle
 import pandas as pd
 import numpy as np
 import random
+import sys
+sys.path.append('../../')
 from util import *
 from keras.preprocessing.sequence import pad_sequences
 

@@ -261,3 +261,6 @@ exp2: word embeddings to 16 instead of 512. something particular of this dataset
 when embeddings arrive
 * try -1 mode without training
 * try to make 0 mode as good as possible.
+
+
+how good is jag10 from jag20? drew?

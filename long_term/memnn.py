@@ -120,11 +120,11 @@ with tf.Session() as sess:
             for j in range(task.dev_batches):
                 feed_dict, m1, qm2, qw = next_batch_wrapper(train=False)
                 temp_loss[j], temp_acc[j], similarity_ = sess.run([loss, accuracy, similarity], feed_dict)
-            print(similarity_[0])
-            print(m1[0])
-            print(qm2[0])
-            print(qw[0])
-            print()
+            # print(similarity_[0])
+            # print(m1[0])
+            # print(qm2[0])
+            # print(qw[0])
+            # print()
 
 
             dev_loss[i//debug_steps] = temp_loss.mean()

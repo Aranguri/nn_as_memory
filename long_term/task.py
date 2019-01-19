@@ -3,6 +3,7 @@ from pearson_dict import pearson_meaning
 import pickle
 import pandas as pd
 import numpy as np
+import random
 from util import *
 from keras.preprocessing.sequence import pad_sequences
 
@@ -22,7 +23,7 @@ class DictTask:
     def load_from_file(self, file):
         with open(file, 'rb') as handle:
             dataset = pickle.load(handle)
-
+        random.shuffle(dataset)
         new_dataset, vocab, word_to_i = [], set([]), {}
 
         for m1, m2, w in dataset:

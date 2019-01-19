@@ -5,7 +5,6 @@ import numpy as np
 same_sen, diff_sen, n = [], [], 10
 
 for i in range(n):
-    print(i)
     #Exp 1: similarity between a name vector and a word from the definition
     dict_task = DictTask(1)
     x, y, _ = dict_task.next_batch()
@@ -34,3 +33,6 @@ Results:
 Same sentence: 0.276916644687
 Diff sentence: 0.350012294601
 '''
+
+def cosine_distance(v1, v2):
+    return np.linalg.norm(v1 - v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))

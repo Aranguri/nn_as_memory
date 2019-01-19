@@ -100,12 +100,12 @@ def next_batch_wrapper(train=True):
 
 with tf.Session() as sess:
     glove_embeddings = task.glove_embeddings()
-    sess.run(tf.global_variables_initializer(), feed_dict={embedding_init: glove_embedding})
+    sess.run(tf.global_variables_initializer(), feed_dict={embeddings_init: glove_embedding})
     tr_acc, dev_loss, dev_acc, sim = {}, {}, {}, {}
 
     for i in itertools.count():
         feed_dict = next_batch_wrapper()[0]
-        tr_acc[i], similarity_, _ = sess.run([accuracy, similarity, minimize], feed_dict)
+        tr_acc[i], similarity_ = sess.run([accuracy, similarity], feed_dict)
 
         '''
         if i % 25 == 0:
@@ -134,6 +134,7 @@ with tf.Session() as sess:
             dev_acc[i//debug_steps] = temp_acc.mean()
             # similarity_ = np.expand_dims(np.argmax(similarity_, 1), 1)
             # correct = np.argmax(similarity_, 1) == feed_dict[wq]
+            print(np.mean(list(tr_acc.values())))
             debug(i, tr_acc, dev_acc, debug_steps)
             # ps(correct)
             '''

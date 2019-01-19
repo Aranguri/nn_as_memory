@@ -148,9 +148,12 @@ class LoadedDictTask:
 
     def embed(self, word):
         if word not in self.weights.keys():
-            dims = len(self.weights['a'])
-            self.weights[word] = np.random.randn(dims) * .7
+            self.weights[word] = self.rand_weight()
         return self.weights[word]
+
+    def rand_weight(self):
+        dims = len(self.weights['a'])
+        return np.random.randn(dims) * .7
 
     def next_batch(self):
         self.i = self.i + 1 if self.i < self.num_batches else 0
@@ -163,7 +166,10 @@ class LoadedDictTask:
     def gen_glove_embeddings(self):
         with open(EMBEDDINGS_PATH, 'rb') as handle:
             self.weights = pickle.load(handle)
-        embeddings = np.zeros((0, 300))
+        # note: the first vector in the word embeddings is for the empty character.
+        #  Thus, we assign a random vector for the empty character. note that
+        #  in DictTask.load_from_file we took into account this and added one to the indexes.
+        embeddings = np.array([[self.rand_weight()]])
         embeddings = np.array([self.embed(word) for word in self.word_to_i.keys()])
         with open('embeddings_300.pickle', 'wb') as handle:
            pickle.dump(embeddings, handle)

@@ -7,7 +7,7 @@ embeddings_size = 512
 batch_size = 32
 mem_size = 8
 debug_steps = 50
-mode = '-1'
+mode = '0'
 
 task = LoadedDictTask(batch_size * mem_size)
 

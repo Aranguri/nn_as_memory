@@ -273,9 +273,17 @@ In this experiment, we use one of the most simple methods of comparing sentences
 
 This is clearly an incorrect approach. For instance, "Clearly, it is a cat" and "It is a cat" would be very different in this similarity measure, but they shouldn't. However, it could work as a baseline.
 
+### Initialization
 The only decision we can make here is how we initialize the representations for the words (ie the word embeddings.) If we don't train the embeddings, a random initialization gives almost the same performance as initializing it with the GloVe word embeddings. The performance is slightly above chance (performance: 13.0% - 13.5%. chance: 12.5%). It seems weird to me that GloVe doesn't add any improvement over random vectors. This could be because GloVe isn't correctly working.
+It holds with value 12.3%
+
+
+### training
+
+
+
 
 ## Thought
 It could make sense to continue with a simpler task.
 
-Lesson: from now on, try to be more organized in this notes and the code I write. Not that much, though. 
+Lesson: from now on, try to be more organized in this notes and the code I write. Not that much, though.

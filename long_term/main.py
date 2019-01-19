@@ -5,21 +5,21 @@ from util import *
 
 learning_rate = 1e-4
 hidden_size = 512
-embeddings_size = 50
+embeddings_size = 300
 batch_size = 32
 mem_size = 8
 debug_steps = 50
 mode = '0.1'
 
 task = LoadedDictTask(batch_size * mem_size)
-glove_embeddings = task.glove_embeddings()
 
 ws_ids = tf.placeholder(tf.int32, (batch_size, mem_size))
 ds_ids = tf.placeholder(tf.int32, (batch_size, mem_size, None))
 wq = tf.placeholder(tf.int32, (batch_size, mem_size))
 dq_ids = tf.placeholder(tf.int32, (batch_size, None))
 
-embeddings = tf.get_variable('embeddings', initializer=glove_embeddings)
+embeddings_init = tf.placeholder(tf.float32, (task.vocab_size, embeddings_size))
+embeddings = tf.get_variable('embeddings', initializer=embeddings_init)
 ws = tf.nn.embedding_lookup(embeddings, ws_ids)
 ds = tf.nn.embedding_lookup(embeddings, ds_ids)
 dq = tf.nn.embedding_lookup(embeddings, dq_ids)
@@ -99,7 +99,8 @@ def next_batch_wrapper(train=True):
     return {ws_ids: words, ds_ids: defs1, wq: query_words, dq_ids: query_defs}, m1, query_m2, query_w
 
 with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
+    glove_embeddings = task.glove_embeddings()
+    sess.run(tf.global_variables_initializer(), feed_dict={embedding_init: glove_embedding})
     tr_acc, dev_loss, dev_acc, sim = {}, {}, {}, {}
 
     for i in itertools.count():

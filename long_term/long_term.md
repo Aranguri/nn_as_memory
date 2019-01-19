@@ -249,3 +249,15 @@ Future: wiktionary + wikidata. (this should be a large dataset, but only start w
 Now it's time to spend on the code and not on datasets. For the future it could be nice to do (webster | wiktionary) + oxford scraped
 
 Compare the perforamnce of datasets of 54k vs 18k. In that way we can see how a dataset of 200k will behave. Also, enabling the model to lookup for more definitions will be great.
+
+
+So we know it's overfitting. In particular, the dev performance dropped from around 0.36 to 0.32.
+
+The MLP has around 1m parameters. The interesting thing to consider is the number of parameters of the word embedding. oops. It has .1M * 500 = 50M. Now the overfitting seems more than reasonable, given that we have 50k words, and 6k cases. It also seems interesting that the dev acc isn't that bad. It would be interesting to know what cases is the nn getting right. The overfitting doesn't seem to be caused just by the word embeddings size: I try reducing it to 16 and 80 and the dev acc got lower, not higher, while the training accuracy remained in a similar value (around .97)
+
+Exp1: what cases is the nn getting right?
+exp2: word embeddings to 16 instead of 512. something particular of this dataset is that it could have several words that appear only so many times. so it can do whatever it wants with them. Also: try without training the WE at all. Also,
+
+when embeddings arrive
+* try -1 mode without training
+* try to make 0 mode as good as possible.

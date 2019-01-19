@@ -81,7 +81,7 @@ class DictTask:
 
             batches.append(new_batch)
 
-        return batches[:-1], len(word_to_i)
+        return batches[:-1], len(word_to_i), word_to_i
 
     def embed(self, word):
         if word not in self.weights.keys():
@@ -136,11 +136,17 @@ class LoadedDictTask:
         # with open(f'data/tasks_150_{batch_size}_{num_batches}_v2.pickle', 'rb') as handle:
             # self.data = pickle.load(handle)
         dict_task = DictTask(batch_size)
-        self.data, self.vocab_size = dict_task.load_from_file('54k.pickle')
+        self.data, self.vocab_size, self.word_to_i = dict_task.load_from_file('54k.pickle')
         self.dev_batches = 10 # Batches reserved for dev set.
         self.num_batches = len(self.data) - self.dev_batches - 1
         self.i = 0
         self.j = 1
+
+    def embed(self, word):
+        if word not in self.weights.keys():
+            dims = len(self.weights['a'])
+            self.weights[word] = np.random.randn(dims) * .7
+        return self.weights[word]
 
     def next_batch(self):
         self.i = self.i + 1 if self.i < self.num_batches else 0
@@ -149,6 +155,18 @@ class LoadedDictTask:
     def dev_batch(self):
         self.j = self.j + 1 if self.j < self.dev_batches else 1
         return self.data[-self.j]
+
+    def gen_glove_embeddings(self):
+        with open(EMBEDDINGS_PATH, 'rb') as handle:
+            self.weights = pickle.load(handle)
+        embeddings = np.zeros((0, 50))
+        embeddings = np.array([self.embed(word) for word in self.word_to_i.keys()])
+        with open('embeddings.pickle', 'wb') as handle:
+           pickle.dump(embeddings, handle)
+
+    def glove_embeddings(self):
+        with open('embeddings.pickle', 'rb') as handle:
+            return pickle.load(handle)
 
 def get_words_and_defs():
     data, dict1, dict2 = [], PyDictionary().meaning, pearson_meaning

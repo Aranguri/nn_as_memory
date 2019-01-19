@@ -3,20 +3,21 @@ from util import *
 
 learning_rate = 1e-4
 hidden_size = 512
-embeddings_size = 512
+embeddings_size = 50
 batch_size = 32
 mem_size = 8
 debug_steps = 50
-mode = '0'
+mode = '0.1'
 
 task = LoadedDictTask(batch_size * mem_size)
+glove_embeddings = task.glove_embeddings()
 
 ws_ids = tf.placeholder(tf.int32, (batch_size, mem_size))
 ds_ids = tf.placeholder(tf.int32, (batch_size, mem_size, None))
 wq = tf.placeholder(tf.int32, (batch_size, mem_size))
 dq_ids = tf.placeholder(tf.int32, (batch_size, None))
 
-embeddings = tf.get_variable('embeddings', shape=(task.vocab_size, embeddings_size))
+embeddings = tf.get_variable('embeddings', initializer=glove_embeddings)
 ws = tf.nn.embedding_lookup(embeddings, ws_ids)
 ds = tf.nn.embedding_lookup(embeddings, ds_ids)
 dq = tf.nn.embedding_lookup(embeddings, dq_ids)
@@ -24,10 +25,15 @@ dq = tf.nn.embedding_lookup(embeddings, dq_ids)
 if mode == '-1':
     similarity = tf.einsum('ijkl,ikl->ij', ds, dq)
 
-if mode == '0':
+if mode == '0.1':
     # similarity: multiply. encode: none
     trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
-    trans_ds = tf.layers.dense(trans_ds, hidden_size, use_bias=False)
+    trans_dq = tf.layers.dense(dq, hidden_size, use_bias=False)
+    similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
+
+if mode == '0.2':
+    # similarity: multiply. encode: none
+    trans_ds = tf.layers.dense(ds, hidden_size, use_bias=False)
     trans_dq = tf.layers.dense(dq, hidden_size, use_bias=False)
     similarity = tf.einsum('ijkl,ikl->ij', trans_ds, trans_dq)
 
@@ -88,7 +94,6 @@ def next_batch_wrapper(train=True):
     query_defs = defs2[range(batch_size), query_ixs]
     query_m2 = m2[range(batch_size), query_ixs]
     query_w = np.array(w)[query_ixs]
-
     return {ws_ids: words, ds_ids: defs1, wq: query_words, dq_ids: query_defs}, m1, query_m2, query_w
 
 with tf.Session() as sess:
@@ -136,10 +141,11 @@ with tf.Session() as sess:
                     print(d2)
                     print(c)
             '''
+        # if i % debug_steps * 100 == 0:
+
 
 
 '''
-
 # probs = tf.nn.softmax(similarity)
 # wq_guess = tf.einsum('ij,ijl->il', probs, ws)
 #do we want to transform wq_guess?'''

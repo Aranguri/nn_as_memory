@@ -1,5 +1,5 @@
 from PyDictionary import PyDictionary
-from pearson_dict import pearson_meaning
+from snippets.pearson_dict import pearson_meaning
 import pickle
 import pandas as pd
 import numpy as np
